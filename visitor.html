@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visitor Survey | Busan</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="langbar" id="langbar"></div>
+  <header class="top">
+    <div class="kicker" data-i="kicker"></div>
+    <h1 data-i="title"></h1>
+    <p class="sub" data-i="subtitle"></p>
+  </header>
+  <div class="card intro">
+    <p data-i="intro"></p>
+    <p class="target" data-i="target"></p>
+    <p class="small" data-i="one"></p>
+  </div>
+  <div id="survey"></div>
+  <button class="btn" id="submit" data-i="submit"></button>
+</div>
+
+<div class="wrap" id="done" hidden>
+  <div class="card done">
+    <div class="big">🙏</div>
+    <h1 data-i="thanks"></h1>
+    <p class="status" id="sendmsg"></p>
+    <button class="btn sec" id="again" data-i="again"></button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script>
+// ===== 문항 정의 (구글시트에는 항상 한국어 값으로 저장) =====
+const o = (list, flags = {}) => list.map((v) => ({ v, other: v === '기타', excl: (flags.excl || []).includes(v) }));
+const NOCONTACT = '음식점·카페 직원과 소통한 경험 없음';
+const Q = [
+  { id: 'q1', num: 1, type: 'multi', col: 'Q1_방문지역',
+    opts: o(['광안리', '해운대', '자갈치', '국제시장', '서면', '기타']) },
+  { id: 'q2', num: 2, type: 'single', col: 'Q2_소통어려움빈도', endIf: (A) => A.is('q2', NOCONTACT),
+    opts: o(['전혀 없었음', '드물게', '가끔', '자주', '매번', NOCONTACT]) },
+  { id: 'q3', num: 3, type: 'multi', max: 2, col: 'Q3_어려웠던내용',
+    show: (A) => !A.is('q2', '전혀 없었음') && !A.is('q2', NOCONTACT),
+    opts: o(['메뉴 이름·설명', '재료·알레르기·식이 제한 정보', '주문 내용·수량·요청 사항', '가격·결제 방법', '기타', '기억나지 않음'], { excl: ['기억나지 않음'] }) },
+  { id: 'q4', num: 4, type: 'multi', max: 2, col: 'Q4_실제발생한일',
+    show: (A) => !A.is('q2', '전혀 없었음') && !A.is('q2', NOCONTACT),
+    opts: o(['주문하거나 정보를 확인하는 데 시간이 더 걸림', '주문·요청이 잘못 전달되거나 다시 확인해야 했음', '주문을 바꾸거나 취소함 또는 구매하지 않고 떠남', '별다른 영향 없음', '기억나지 않음', '기타'], { excl: ['별다른 영향 없음', '기억나지 않음'] }) },
+  { id: 'q5', num: 5, type: 'multi', max: 2, col: 'Q5_도움될지원',
+    show: (A) => !A.is('q2', NOCONTACT),
+    opts: o(['이해할 수 있는 언어의 메뉴·상품 설명', '명확한 재료·알레르기·식이 제한 안내', '명확한 주문·가격·결제 안내', '번역·통역 도구', '내가 이해하는 언어로 소통할 수 있는 직원', '필요 없음', '잘 모르겠음', '기타'], { excl: ['필요 없음', '잘 모르겠음'] }) }
+];
+
+// ===== 언어별 문구 =====
+const LANGS = [
+  ['en', 'English'], ['ja', '日本語'], ['zh-CN', '简体中文'], ['zh-TW', '繁體中文'], ['vi', 'Tiếng Việt'], ['ko', '한국어']
+];
+const L = {
+  en: {
+    ui: { kicker: 'Tongmyong University · Service-Learning', title: 'Visitor Survey', subtitle: 'Understanding your experience at local restaurants and cafés in Busan',
+      intro: 'Hello! We are students from Tongmyong University working on a service-learning project. This anonymous survey asks about your experience during this visit to Busan. It takes about 1–2 minutes. Taking part is voluntary. You may skip any question or stop at any time. We do not collect your name or contact details.',
+      target: 'For international visitors to Busan. If you live in Busan, please do not complete this survey.',
+      one: 'Choose one answer unless the question says otherwise.',
+      upto: 'Select up to {n}', all: 'Select all that apply', otherPh: 'Please specify', maxMsg: 'You can select up to {n}.',
+      submit: 'Submit', thanks: 'Thank you for your time!', again: 'New response', empty: 'You have not answered any questions. Submit anyway?',
+      sent: '✓ Submitted', saved: 'Saved on this device. It will be sent automatically when you are online.' },
+    q: {
+      q1: { t: 'Which of these areas have you visited during this trip to Busan?', o: ['Gwangalli', 'Haeundae', 'Jagalchi', 'Gukje Market', 'Seomyeon', 'Other'] },
+      q2: { t: 'During this trip, how often have you had difficulty communicating with staff at restaurants or cafés in Busan?', o: ['Never', 'Rarely', 'Sometimes', 'Often', 'Every time', 'I have not interacted with staff at a restaurant or café'], end: 'The survey ends here. Please tap Submit. Thank you!' },
+      q3: { t: 'What was difficult to communicate about?', o: ['Menu names or descriptions', 'Ingredients, allergies or dietary needs', 'Orders, quantities or special requests', 'Prices or payment methods', 'Other', 'Cannot remember'] },
+      q4: { t: 'What happened because of the communication difficulty?', o: ['It took longer to order or get information', 'My order or request was misunderstood or had to be checked again', 'I changed or cancelled an order, or left without buying', 'There was no noticeable effect', 'Cannot remember', 'Other'] },
+      q5: { t: 'What, if anything, would help you communicate with staff?', o: ['Menu or product descriptions in a language I understand', 'Clear information about ingredients, allergies and dietary needs', 'Clear information about ordering, prices and payment', 'Translation or interpreting tools', 'Staff who speak a language I understand', 'No support needed', 'Not sure', 'Other'] }
+    }
+  },
+  ja: {
+    ui: { kicker: '東明大学 · サービスラーニング', title: '旅行者アンケート', subtitle: '釜山の飲食店・カフェでのご経験について',
+      intro: 'こんにちは！私たちは東明（トンミョン）大学でサービスラーニング活動を行っている学生です。この匿名アンケートでは、今回の釜山旅行でのご経験についてお伺いします。所要時間は約1～2分です。参加は任意で、どの質問も飛ばしたり、いつでも中止したりできます。お名前や連絡先はお伺いしません。',
+      target: '釜山を訪れている海外からの旅行者の方が対象です。釜山にお住まいの方はご回答をご遠慮ください。',
+      one: '特に記載がない場合は、1つだけお選びください。',
+      upto: '{n}つまで', all: '当てはまるものをすべて', otherPh: '具体的にご記入ください', maxMsg: '{n}つまで選択できます。',
+      submit: '送信する', thanks: 'ご協力ありがとうございました！', again: '新しい回答', empty: 'まだ回答がありません。このまま送信しますか？',
+      sent: '✓ 送信しました', saved: 'この端末に保存しました。オンラインになると自動で送信されます。' },
+    q: {
+      q1: { t: '今回の釜山旅行で訪れた場所はどこですか？', o: ['広安里（クァンアンリ）', '海雲台（ヘウンデ）', 'チャガルチ', '国際市場（クッチェシジャン）', '西面（ソミョン）', 'その他'] },
+      q2: { t: '今回の旅行中、釜山の飲食店やカフェのスタッフとのコミュニケーションで、どのくらいの頻度で困ったことがありましたか？', o: ['まったくなかった', 'まれにあった', 'ときどきあった', 'よくあった', '毎回あった', '飲食店・カフェのスタッフとやり取りしたことがない'], end: 'アンケートはここで終了です。「送信する」を押してください。ありがとうございました！' },
+      q3: { t: 'どのような内容のやり取りが難しかったですか？', o: ['メニュー名・説明', '食材・アレルギー・食事制限の情報', '注文内容・数量・リクエスト', '価格・支払い方法', 'その他', '覚えていない'] },
+      q4: { t: 'コミュニケーションの難しさによって、実際にどのようなことがありましたか？', o: ['注文や情報の確認に時間がかかった', '注文やリクエストが誤って伝わった、または確認し直す必要があった', '注文を変更・キャンセルした、または購入せずに店を出た', '特に影響はなかった', '覚えていない', 'その他'] },
+      q5: { t: 'スタッフとのコミュニケーションに、どのようなサポートがあると役立ちますか？', o: ['理解できる言語でのメニュー・商品説明', '食材・アレルギー・食事制限についての分かりやすい案内', '注文・価格・支払いについての分かりやすい案内', '翻訳・通訳ツール', '自分が理解できる言語を話せるスタッフ', '特に必要ない', 'よく分からない', 'その他'] }
+    }
+  },
+  'zh-CN': {
+    ui: { kicker: '东明大学 · 服务学习', title: '游客问卷', subtitle: '关于您在釜山餐厅和咖啡馆的体验',
+      intro: '您好！我们是东明大学的学生，正在进行一项服务学习（Service-Learning）项目。本问卷为匿名填写，旨在了解您此次釜山之行的体验，约需1–2分钟。参与完全自愿，您可以跳过任何问题或随时停止。我们不会收集您的姓名或联系方式。',
+      target: '本问卷面向来釜山旅游的外国游客。居住在釜山的人士请勿填写。',
+      one: '除特别说明外，请只选择一项。',
+      upto: '最多选{n}项', all: '可多选', otherPh: '请具体填写', maxMsg: '最多可选择{n}项。',
+      submit: '提交', thanks: '感谢您的参与！', again: '新的回答', empty: '您还没有回答任何问题。仍要提交吗？',
+      sent: '✓ 已提交', saved: '已保存在本设备上，联网后将自动发送。' },
+    q: {
+      q1: { t: '此次釜山旅行中，您去过以下哪些地方？', o: ['广安里', '海云台', '札嘎其市场', '国际市场', '西面', '其他'] },
+      q2: { t: '此次旅行中，您与釜山餐厅或咖啡馆的店员沟通时，遇到困难的频率如何？', o: ['从未', '很少', '有时', '经常', '每次都有', '没有和餐厅或咖啡馆的店员交流过'], end: '问卷到此结束，请点击“提交”。谢谢！' },
+      q3: { t: '在哪些内容上沟通比较困难？', o: ['菜单名称或说明', '食材、过敏或饮食禁忌信息', '点餐内容、数量或特殊要求', '价格或付款方式', '其他', '记不清了'] },
+      q4: { t: '沟通困难实际带来了什么影响？', o: ['点餐或确认信息花了更多时间', '点餐或要求被误解，或需要再次确认', '更改或取消了点餐，或没有购买就离开了', '没有明显影响', '记不清了', '其他'] },
+      q5: { t: '什么样的帮助能让您更好地与店员沟通？', o: ['用我能看懂的语言提供的菜单或商品说明', '清晰的食材、过敏和饮食禁忌说明', '清晰的点餐、价格和付款说明', '翻译或口译工具', '会说我能听懂的语言的店员', '不需要帮助', '不确定', '其他'] }
+    }
+  },
+  'zh-TW': {
+    ui: { kicker: '東明大學 · 服務學習', title: '遊客問卷', subtitle: '關於您在釜山餐廳與咖啡廳的體驗',
+      intro: '您好！我們是東明大學的學生，正在進行一項服務學習（Service-Learning）計畫。本問卷為匿名填寫，想了解您這次釜山之旅的體驗，約需1–2分鐘。參與完全自願，您可以略過任何問題或隨時停止。我們不會收集您的姓名或聯絡方式。',
+      target: '本問卷適用於來釜山旅遊的外國旅客。居住在釜山的人請勿填寫。',
+      one: '除特別說明外，請只選擇一項。',
+      upto: '最多選{n}項', all: '可複選', otherPh: '請具體填寫', maxMsg: '最多可選擇{n}項。',
+      submit: '送出', thanks: '感謝您的參與！', again: '新的回答', empty: '您還沒有回答任何問題。仍要送出嗎？',
+      sent: '✓ 已送出', saved: '已儲存在此裝置上，連上網路後會自動傳送。' },
+    q: {
+      q1: { t: '這次釜山旅行中，您去過以下哪些地方？', o: ['廣安里', '海雲臺', '札嘎其市場', '國際市場', '西面', '其他'] },
+      q2: { t: '這次旅行中，您與釜山餐廳或咖啡廳店員溝通時，遇到困難的頻率如何？', o: ['從未', '很少', '有時', '經常', '每次都有', '沒有和餐廳或咖啡廳的店員交流過'], end: '問卷到此結束，請點選「送出」。謝謝！' },
+      q3: { t: '哪些內容溝通起來比較困難？', o: ['菜單名稱或說明', '食材、過敏或飲食限制資訊', '點餐內容、數量或特殊需求', '價格或付款方式', '其他', '記不清楚'] },
+      q4: { t: '溝通困難實際造成了什麼影響？', o: ['點餐或確認資訊花了更多時間', '點餐或需求被誤解，或需要再次確認', '更改或取消點餐，或沒有購買就離開', '沒有明顯影響', '記不清楚', '其他'] },
+      q5: { t: '什麼樣的協助能讓您更容易與店員溝通？', o: ['以我看得懂的語言提供菜單或商品說明', '清楚的食材、過敏與飲食限制說明', '清楚的點餐、價格與付款說明', '翻譯或口譯工具', '會說我聽得懂的語言的店員', '不需要協助', '不確定', '其他'] }
+    }
+  },
+  vi: {
+    ui: { kicker: 'Đại học Tongmyong · Service-Learning', title: 'Khảo sát du khách', subtitle: 'Trải nghiệm của bạn tại nhà hàng và quán cà phê ở Busan',
+      intro: 'Xin chào! Chúng tôi là sinh viên Đại học Tongmyong đang thực hiện một dự án học tập phục vụ cộng đồng (service-learning). Khảo sát ẩn danh này hỏi về trải nghiệm của bạn trong chuyến thăm Busan lần này và mất khoảng 1–2 phút. Việc tham gia là tự nguyện. Bạn có thể bỏ qua bất kỳ câu hỏi nào hoặc dừng lại bất cứ lúc nào. Chúng tôi không thu thập tên hay thông tin liên lạc của bạn.',
+      target: 'Dành cho du khách quốc tế đến Busan. Nếu bạn sống ở Busan, vui lòng không tham gia khảo sát này.',
+      one: 'Chỉ chọn một đáp án, trừ khi câu hỏi có ghi chú khác.',
+      upto: 'Chọn tối đa {n}', all: 'Chọn tất cả mục phù hợp', otherPh: 'Vui lòng ghi rõ', maxMsg: 'Bạn chỉ có thể chọn tối đa {n}.',
+      submit: 'Gửi', thanks: 'Cảm ơn bạn đã dành thời gian!', again: 'Câu trả lời mới', empty: 'Bạn chưa trả lời câu hỏi nào. Vẫn gửi chứ?',
+      sent: '✓ Đã gửi', saved: 'Đã lưu trên thiết bị này. Sẽ tự động gửi khi có mạng.' },
+    q: {
+      q1: { t: 'Trong chuyến đi Busan lần này, bạn đã đến những khu vực nào?', o: ['Gwangalli', 'Haeundae', 'Jagalchi', 'Chợ Gukje', 'Seomyeon', 'Khác'] },
+      q2: { t: 'Trong chuyến đi này, bạn có thường gặp khó khăn khi giao tiếp với nhân viên nhà hàng hoặc quán cà phê ở Busan không?', o: ['Không bao giờ', 'Hiếm khi', 'Thỉnh thoảng', 'Thường xuyên', 'Lần nào cũng vậy', 'Tôi chưa giao tiếp với nhân viên nhà hàng hay quán cà phê'], end: 'Khảo sát kết thúc tại đây. Vui lòng nhấn Gửi. Xin cảm ơn!' },
+      q3: { t: 'Bạn gặp khó khăn khi trao đổi về nội dung nào?', o: ['Tên món hoặc mô tả món', 'Nguyên liệu, dị ứng hoặc chế độ ăn kiêng', 'Nội dung gọi món, số lượng hoặc yêu cầu đặc biệt', 'Giá hoặc phương thức thanh toán', 'Khác', 'Không nhớ'] },
+      q4: { t: 'Khó khăn trong giao tiếp đã dẫn đến điều gì?', o: ['Mất nhiều thời gian hơn để gọi món hoặc hỏi thông tin', 'Món hoặc yêu cầu của tôi bị hiểu sai hoặc phải kiểm tra lại', 'Tôi đã đổi hoặc hủy món, hoặc rời đi mà không mua', 'Không có ảnh hưởng đáng kể', 'Không nhớ', 'Khác'] },
+      q5: { t: 'Điều gì sẽ giúp bạn giao tiếp với nhân viên dễ hơn?', o: ['Mô tả món/sản phẩm bằng ngôn ngữ tôi hiểu', 'Thông tin rõ ràng về nguyên liệu, dị ứng và chế độ ăn kiêng', 'Hướng dẫn rõ ràng về gọi món, giá và thanh toán', 'Công cụ dịch hoặc phiên dịch', 'Nhân viên nói được ngôn ngữ tôi hiểu', 'Không cần hỗ trợ', 'Không chắc', 'Khác'] }
+    }
+  },
+  ko: {
+    ui: { kicker: '동명대학교 서비스러닝', title: '외국인 관광객 설문지', subtitle: '부산 음식점·카페 이용 경험 조사',
+      intro: '안녕하세요. 동명대학교 서비스러닝 활동으로 이번 부산 방문 중 음식점·카페 이용 경험을 조사합니다. 약 1~2분이 걸리며 익명으로 답합니다. 참여는 자율이고, 문항을 건너뛰거나 언제든 중단할 수 있습니다. 이름·연락처는 받지 않습니다.',
+      target: '대상은 부산을 방문한 외국인 관광객입니다. 부산 거주자는 조사 대상에서 제외합니다.',
+      one: '별도 표시가 없으면 한 개만 선택해 주세요.',
+      upto: '최대 {n}개', all: '모두 선택', otherPh: '직접 입력', maxMsg: '최대 {n}개까지 선택할 수 있어요',
+      submit: '제출하기', thanks: '응답해 주셔서 감사합니다.', again: '새 응답', empty: '응답한 문항이 없습니다. 그래도 제출할까요?',
+      sent: '✓ 전송 완료', saved: '이 기기에 저장했어요. 인터넷이 연결되면 자동 전송됩니다.' },
+    q: {
+      q1: { t: '이번 부산 여행에서 방문한 곳은 어디입니까?' },
+      q2: { t: '이번 부산 여행 중 음식점·카페 직원과 소통하는 데 얼마나 자주 어려움이 있었습니까?', end: '설문이 여기서 끝납니다. 제출하기를 눌러 주세요. 감사합니다!' },
+      q3: { t: '어떤 내용을 주고받을 때 어려움이 있었습니까?' },
+      q4: { t: '소통의 어려움 때문에 실제로 어떤 일이 있었습니까?' },
+      q5: { t: '직원과 소통할 때 어떤 지원이 도움이 되겠습니까?' }
+    }
+  }
+};
+
+// ===== 언어 선택 =====
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+function detectLang() {
+  const saved = params.get('lang') || SL.store.get('sl_vlang', '');
+  if (L[saved]) return saved;
+  const nav = (navigator.language || 'en').toLowerCase();
+  if (nav.startsWith('ja')) return 'ja';
+  if (nav.startsWith('zh')) return /tw|hk|mo|hant/.test(nav) ? 'zh-TW' : 'zh-CN';
+  if (nav.startsWith('vi')) return 'vi';
+  return 'en';
+}
+let lang = detectLang();
+let survey, rid = SL.rid('V');
+
+const T = (q) => {
+  const tx = L[lang].q[q.id] || {};
+  return { t: tx.t, n: tx.n, end: tx.end, o: tx.o || q.opts.map((x) => x.v) };
+};
+
+function snapshot() {
+  // 언어를 바꿔도 이미 고른 답 유지
+  const s = {};
+  document.querySelectorAll('#survey input').forEach((el, i) => (s[i] = el.type === 'text' ? el.value : el.checked));
+  return s;
+}
+function restore(s) {
+  document.querySelectorAll('#survey input').forEach((el, i) => {
+    if (!(i in s)) return;
+    if (el.type === 'text') el.value = s[i]; else { el.checked = s[i]; if (el.type === 'radio' && s[i]) el.dataset.was = '1'; }
+  });
+}
+function applyLang(keep) {
+  const snap = keep ? snapshot() : null;
+  document.documentElement.lang = lang;
+  const ui = L[lang].ui;
+  document.querySelectorAll('[data-i]').forEach((el) => (el.textContent = ui[el.dataset.i] || ''));
+  $('langbar').innerHTML = LANGS.map(([k, n]) => `<button type="button" data-l="${k}" class="${k === lang ? 'on' : ''}">${n}</button>`).join('');
+  $('langbar').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    lang = b.dataset.l; SL.store.set('sl_vlang', lang); applyLang(true);
+  }));
+  survey = new SL.Survey($('survey'), Q, T, ui);
+  survey.render();
+  if (snap) { restore(snap); survey.update(); }
+}
+
+$('submit').addEventListener('click', async () => {
+  const { data, answered } = survey.collect();
+  if (!answered && !confirm(L[lang].ui.empty)) return;
+  const row = Object.assign({
+    '응답번호': rid, '조사일': SL.now().date, '시간': SL.now().time,
+    '조사자': params.get('by') || '', '조사상권': params.get('area') || '', '응답언어': LANGS.find((x) => x[0] === lang)[1]
+  }, data);
+  $('submit').disabled = true;
+  const r = await SL.send('관광객', row);
+  $('submit').disabled = false;
+  const m = $('sendmsg');
+  if (r.left || r.nourl) { m.textContent = L[lang].ui.saved; m.className = 'status warn'; }
+  else { m.textContent = L[lang].ui.sent; m.className = 'status ok'; }
+  $('app').hidden = true; $('done').hidden = false; window.scrollTo(0, 0);
+});
+$('again').addEventListener('click', () => {
+  rid = SL.rid('V'); applyLang(false);
+  $('done').hidden = true; $('app').hidden = false; window.scrollTo(0, 0);
+});
+applyLang(false);
+</script>
+</body>
+</html>

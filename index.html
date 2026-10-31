@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>조사자 홈 | 우리 동네 메뉴를 세계로</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  #qr{display:flex;justify-content:center;padding:16px;background:#fff;border-radius:12px;margin-top:12px}
+  #qr[hidden]{display:none}
+  .row{display:grid;gap:10px}
+  a.btn{text-decoration:none;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="kicker">동명대학교 서비스러닝</div>
+    <h1>우리 동네 메뉴를 세계로</h1>
+    <p class="sub">조사자 홈: 오늘 조사할 사람과 상권을 먼저 고르세요</p>
+  </header>
+
+  <div class="card">
+    <div class="grid2">
+      <label class="fl">조사자<select id="by"></select></label>
+      <label class="fl">조사 상권<select id="area"></select></label>
+    </div>
+    <input class="fld" id="area-etc" placeholder="기타 상권 직접 입력" style="margin-top:8px" hidden>
+  </div>
+
+  <div class="row">
+    <a class="btn" id="go-owner" href="owner.html">🏪 사장님 설문 시작</a>
+    <button class="btn sec" id="show-qr">📱 관광객용 QR 보여주기</button>
+    <a class="btn sec" id="go-visitor" href="visitor.html">🌏 관광객 설문을 이 폰으로 열기</a>
+  </div>
+
+  <div class="card" id="qrbox" hidden>
+    <p style="margin:0;font-weight:700;text-align:center">Scan to take a 1-minute survey</p>
+    <p class="small" style="text-align:center;margin:4px 0 0">English · 日本語 · 中文 · Tiếng Việt · 한국어</p>
+    <div id="qr"></div>
+    <p class="small" id="qr-url" style="word-break:break-all;text-align:center"></p>
+  </div>
+
+  <div class="card">
+    <p style="margin:0 0 6px;font-weight:700">조사자 안내</p>
+    <p class="small" style="margin:0">· 같은 사람에게 설문을 중복으로 받지 않습니다.<br>
+    · 서비스(만두)를 먼저 소개하거나 체험을 권하지 말고, 응답자의 경험을 그대로 기록합니다.<br>
+    · 관광객 응답 언어는 자동으로 기록됩니다.<br>
+    · 인터넷이 끊겨도 폰에 저장했다가 연결되면 자동 전송됩니다.</p>
+    <p class="status" id="pending"></p>
+    <button class="btn sec" id="resend" hidden>미전송 응답 다시 보내기</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script>
+const CFG = window.SL_CONFIG;
+const $ = (id) => document.getElementById(id);
+$('by').innerHTML = '<option value="">선택</option>' + CFG.TEAM.map((t) => `<option>${SL.esc(t)}</option>`).join('');
+$('area').innerHTML = '<option value="">선택</option>' + CFG.AREAS.map((t) => `<option>${SL.esc(t)}</option>`).join('') + '<option>기타</option>';
+$('by').value = SL.store.get('sl_by', '');
+$('area').value = SL.store.get('sl_area', '');
+$('area-etc').value = SL.store.get('sl_area_etc', '');
+
+function areaVal() { return $('area').value === '기타' ? `기타: ${$('area-etc').value.trim()}` : $('area').value; }
+function visitorUrl() {
+  const u = new URL('visitor.html', location.href);
+  u.searchParams.set('by', $('by').value);
+  u.searchParams.set('area', areaVal());
+  return u.toString();
+}
+function sync() {
+  $('area-etc').hidden = $('area').value !== '기타';
+  SL.store.set('sl_by', $('by').value); SL.store.set('sl_area', $('area').value); SL.store.set('sl_area_etc', $('area-etc').value);
+  $('go-visitor').href = visitorUrl();
+  if (!$('qrbox').hidden) drawQR();
+}
+function ready() {
+  if (!$('by').value || !$('area').value) { SL.toast('조사자와 조사 상권을 먼저 선택해 주세요'); return false; }
+  return true;
+}
+function drawQR() {
+  $('qr').innerHTML = '';
+  new QRCode($('qr'), { text: visitorUrl(), width: 240, height: 240, correctLevel: QRCode.CorrectLevel.M });
+  $('qr-url').textContent = visitorUrl();
+}
+['by', 'area'].forEach((id) => $(id).addEventListener('change', sync));
+$('area-etc').addEventListener('input', sync);
+$('go-owner').addEventListener('click', (e) => { if (!ready()) e.preventDefault(); });
+$('go-visitor').addEventListener('click', (e) => { if (!ready()) e.preventDefault(); });
+$('show-qr').addEventListener('click', () => {
+  if (!ready()) return;
+  $('qrbox').hidden = !$('qrbox').hidden;
+  if (!$('qrbox').hidden) { drawQR(); $('qrbox').scrollIntoView({ behavior: 'smooth' }); }
+});
+function showPending() {
+  const p = SL.pending();
+  $('pending').textContent = p ? `⚠ 아직 전송 안 된 응답 ${p}건` : (CFG.SCRIPT_URL ? '✓ 미전송 응답 없음' : '⚠ config.js에 SCRIPT_URL을 아직 넣지 않았어요');
+  $('pending').className = 'status ' + (p || !CFG.SCRIPT_URL ? 'warn' : 'ok');
+  $('resend').hidden = !p;
+}
+$('resend').addEventListener('click', async () => { await SL.flush(); showPending(); });
+sync(); showPending();
+</script>
+</body>
+</html>

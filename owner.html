@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>사장님 설문 | 우리 동네 메뉴를 세계로</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="kicker">동명대학교 서비스러닝</div>
+    <h1>소상공인 사장님 설문지</h1>
+    <p class="sub">우리 동네 메뉴를 세계로 | 상권 운영의 어려움과 외국인 관광객 응대 경험</p>
+  </header>
+
+  <div class="card intro">
+    <p>안녕하세요. 동명대학교 서비스러닝 활동의 일환으로, 장사하면서 겪는 어려움과 필요한 지원을 알아보고자 합니다. 응답은 익명으로 활동 기획과 결과 정리에 활용하며, 이름·연락처는 받지 않습니다. 참여는 자율이며 원하지 않는 문항은 건너뛰거나 중단할 수 있습니다.</p>
+    <p class="small">예상 소요 시간 5~7분 | 별도 표시가 없으면 한 개만 선택해 주세요.</p>
+  </div>
+
+  <div class="card">
+    <div class="kicker" style="margin-bottom:8px">조사자 기록</div>
+    <div class="grid2">
+      <label class="fl">조사일<input class="fld" type="date" id="f-date"></label>
+      <label class="fl">시간<input class="fld" type="time" id="f-time"></label>
+      <label class="fl">조사자<select id="f-by"></select></label>
+      <label class="fl">조사 상권<select id="f-area"></select></label>
+    </div>
+    <input class="fld" id="f-area-etc" placeholder="기타 상권 직접 입력" style="margin-top:8px" hidden>
+    <p class="small" style="margin:8px 0 0">응답번호 <b id="f-rid"></b> (자동)</p>
+  </div>
+
+  <div id="survey"></div>
+
+  <button class="btn" id="submit">제출하기</button>
+  <p class="small" style="margin-top:14px"><b>조사자 안내</b> ‘없음·잘 모르겠음·기억나지 않음·사용 경험 없음’은 자동으로 단독 선택됩니다. 서비스를 먼저 소개하거나 체험을 권하지 말고, 응답자의 경험을 그대로 기록합니다.</p>
+  <p class="status" id="pending"></p>
+</div>
+
+<div class="wrap" id="done" hidden>
+  <div class="card done">
+    <div class="big">🙏</div>
+    <h1>응답해 주셔서 감사합니다.</h1>
+    <p class="status" id="sendmsg"></p>
+    <button class="btn" id="again">다음 사장님 설문 시작</button>
+    <a class="btn sec" href="index.html" style="text-decoration:none">조사자 홈으로</a>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script>
+const NOZERO = (A) => !A.is('q5', '0일');
+const o = (list, flags = {}) => list.map((v) => ({ v, other: v === '기타', excl: (flags.excl || []).includes(v) }));
+
+const Q = [
+  { id: 'q1', num: 1, type: 'single', col: 'Q1_업종', sec: '가게 운영 전반의 어려움',
+    t: '가게의 주된 업종은 무엇입니까?',
+    opts: o(['음식점', '카페·음료', '식품 판매', '의류·잡화', '기타']) },
+  { id: 'q2', num: 2, type: 'matrix', col: 'Q2',
+    t: '최근 30일 동안 다음 항목에서 어느 정도 어려움을 겪으셨습니까?',
+    n: '각 행마다 한 칸을 선택해 주세요. 경험하거나 해당하는 일이 없으면 ‘해당 없음’을 선택해 주세요.',
+    rows: o(['매출 감소와 손님 유치', '임대료·재료비 등 비용 부담', '인력 확보와 업무 부담', '가게 홍보와 온라인 관리', '메뉴·상품·서비스 관리', '외국인 관광객과의 소통', '기타']),
+    cols: ['전혀 없음', '적음', '보통', '큼', '매우 큼', '해당 없음'] },
+  { id: 'q3', num: 3, type: 'rank', col: 'Q3', source: 'q2',
+    t: '2번 항목 중 가장 먼저 해결하고 싶은 어려움은 무엇입니까?',
+    r1: '1순위', r2: '2순위', none: '해결이 필요한 어려움 없음' },
+  { id: 'q4', num: 4, type: 'multi', max: 2, col: 'Q4_필요한운영지원',
+    t: '가게 운영에 어떤 지원이 가장 필요합니까?',
+    opts: o(['손님 유치·홍보', '비용 부담 완화', '인력·업무 지원', '메뉴·상품 개선', '외국인 응대 지원', '필요 없음', '기타'], { excl: ['필요 없음'] }) },
+  { id: 'q5', num: 5, type: 'single', col: 'Q5_외국인응대일수', sec: '외국인 관광객 방문 현황',
+    t: '최근 30일 동안 외국인 관광객을 직접 응대한 날은 며칠입니까?',
+    opts: o(['0일', '1~5일', '6~15일', '16일 이상', '잘 모르겠음']) },
+  { id: 'q6', num: 6, type: 'single', col: 'Q6_외국인손님비중',
+    t: '최근 30일 동안 전체 손님 중 외국인 관광객은 어느 정도였습니까?',
+    n: '정확한 집계가 없으면 체감 기준으로 답해 주세요. 관광객 여부를 구분하기 어려우면 ‘잘 모르겠음’을 선택해 주세요.',
+    opts: o(['없음', '10% 미만', '10~29%', '30~49%', '50% 이상', '잘 모르겠음']) },
+  { id: 'q7', num: 7, type: 'single', col: 'Q7_소통어려움정도', sec: '외국인 관광객 응대 경험', show: NOZERO,
+    t: '외국인 관광객과 소통하는 데 어느 정도 어려움이 있었습니까?',
+    n: '최근 30일 동안의 경험을 기준으로 답해 주세요.',
+    opts: o(['전혀 없음', '적음', '보통', '큼', '매우 큼', '판단하기 어려움']) },
+  { id: 'q8', num: 8, type: 'multi', max: 3, col: 'Q8_어려웠던내용', show: (A) => NOZERO(A) && !A.is('q7', '전혀 없음'),
+    t: '어떤 내용을 주고받을 때 어려움이 있었습니까?',
+    opts: o(['메뉴·상품의 이름이나 특징', '재료·알레르기·식이 제한 정보', '주문 내용·수량·요청 사항', '가격·결제 방법', '이용 방법·위치·시간', '기타', '기억나지 않음'], { excl: ['기억나지 않음'] }) },
+  { id: 'q9', num: 9, type: 'multi', max: 2, col: 'Q9_실제발생한일', show: (A) => NOZERO(A) && !A.is('q7', '전혀 없음'),
+    t: '소통의 어려움 때문에 실제로 어떤 일이 있었습니까?',
+    opts: o(['응대 시간이 길어짐', '주문·요청을 잘못 이해하거나 다시 확인함', '주문 변경·취소·환불이 생김', '손님이 구매하지 않고 떠남', '불만이나 항의가 생김', '별다른 영향 없음', '잘 모르겠음', '기타'], { excl: ['별다른 영향 없음', '잘 모르겠음'] }) },
+  { id: 'q10', num: 10, type: 'multi', max: 3, col: 'Q10_응대방법', show: NOZERO,
+    t: '외국인 관광객을 응대할 때 어떤 방법을 사용하셨습니까?',
+    opts: o(['직접 외국어로 설명', '번역 앱·통역 기기', '외국어 메뉴·안내문', '사진·그림·몸짓', '직원·동행인 등의 도움', '별도 방법 사용 안 함', '기타'], { excl: ['별도 방법 사용 안 함'] }) },
+  { id: 'q11', num: 11, type: 'multi', max: 2, col: 'Q11_방법의한계', show: NOZERO,
+    t: '사용한 방법으로도 해결하기 어려웠던 점은 무엇입니까?',
+    opts: o(['번역·설명이 정확한지 확인하기 어려움', '기기 조작·입력에 시간 소요', '재료·알레르기 등 구체적인 정보 설명', '지원 언어 부족', '사용 비용·준비 부담', '특별한 한계 없음', '사용 경험 없음', '기타'], { excl: ['특별한 한계 없음', '사용 경험 없음'] }) },
+  { id: 'q12', num: 12, type: 'multi', max: 2, col: 'Q12_필요한응대지원', sec: '필요한 지원과 실제 사례',
+    t: '앞으로 외국인 관광객 응대에 어떤 지원이 필요합니까?',
+    opts: o(['외국어 메뉴·상품 설명', '재료·알레르기·식이 제한 안내', '주문·가격·결제 안내', '간단한 외국어 응대 교육', '번역·통역 도구 사용 지원', '외국어 가게 소개·홍보 자료', '필요 없음', '잘 모르겠음', '기타'], { excl: ['필요 없음', '잘 모르겠음'] }) },
+  { id: 'q13', num: 13, type: 'text', col: 'Q13_자유응답',
+    t: '장사하면서 가장 불편했던 일이나 꼭 필요한 지원을 자유롭게 적어 주세요.', n: '선택 문항입니다.' }
+];
+
+// 한국어 화면: 문항 정의의 글자를 그대로 사용
+const T = (q) => ({ t: q.t, n: q.n, sec: q.sec, o: (q.opts || []).map((x) => x.v), rows: (q.rows || []).map((x) => x.v), cols: q.cols, r1: q.r1, r2: q.r2, none: q.none });
+const UI = { upto: '최대 {n}개', all: '모두 선택', otherPh: '직접 입력', choose: '선택하세요', maxMsg: '최대 {n}개까지 선택할 수 있어요', textPh: '자유롭게 적어 주세요' };
+
+const CFG = window.SL_CONFIG;
+const $ = (id) => document.getElementById(id);
+let survey, rid;
+
+function setupMeta() {
+  const n = SL.now();
+  $('f-date').value = n.date; $('f-time').value = n.time;
+  rid = SL.rid('O'); $('f-rid').textContent = rid;
+}
+function init() {
+  $('f-by').innerHTML = '<option value="">선택</option>' + CFG.TEAM.map((t) => `<option>${SL.esc(t)}</option>`).join('');
+  $('f-area').innerHTML = '<option value="">선택</option>' + CFG.AREAS.map((t) => `<option>${SL.esc(t)}</option>`).join('') + '<option>기타</option>';
+  $('f-by').value = SL.store.get('sl_by', '');
+  $('f-area').value = SL.store.get('sl_area', '');
+  $('f-area-etc').value = SL.store.get('sl_area_etc', '');
+  const syncEtc = () => ($('f-area-etc').hidden = $('f-area').value !== '기타');
+  $('f-area').addEventListener('change', syncEtc); syncEtc();
+  setupMeta();
+  survey = new SL.Survey($('survey'), Q, T, UI);
+  survey.render();
+  showPending();
+}
+function showPending() {
+  const p = SL.pending();
+  $('pending').textContent = p ? `⚠ 아직 전송 안 된 응답 ${p}건 (인터넷 연결되면 자동 전송)` : '';
+  $('pending').className = 'status warn';
+}
+
+$('submit').addEventListener('click', async () => {
+  const area = $('f-area').value === '기타' ? `기타: ${$('f-area-etc').value.trim()}` : $('f-area').value;
+  if (!$('f-by').value || !$('f-area').value) { SL.toast('조사자와 조사 상권을 먼저 선택해 주세요'); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  const { data, answered } = survey.collect();
+  if (!answered && !confirm('응답한 문항이 없습니다. 그래도 제출할까요?')) return;
+  SL.store.set('sl_by', $('f-by').value); SL.store.set('sl_area', $('f-area').value); SL.store.set('sl_area_etc', $('f-area-etc').value);
+  const row = Object.assign({ '응답번호': rid, '조사일': $('f-date').value, '시간': $('f-time').value, '조사자': $('f-by').value, '조사상권': area }, data);
+  $('submit').disabled = true;
+  const r = await SL.send('사장님', row);
+  $('submit').disabled = false;
+  const m = $('sendmsg');
+  if (r.nourl) { m.textContent = '⚠ 전송 주소(SCRIPT_URL)가 설정되지 않아 폰에만 저장했어요.'; m.className = 'status warn'; }
+  else if (r.left) { m.textContent = `⚠ 인터넷이 불안정해 폰에 저장했어요 (대기 ${r.left}건). 연결되면 자동 전송됩니다.`; m.className = 'status warn'; }
+  else { m.textContent = '✓ 구글시트로 전송 완료'; m.className = 'status ok'; }
+  $('app').hidden = true; $('done').hidden = false; window.scrollTo(0, 0);
+});
+$('again').addEventListener('click', () => {
+  survey.render(); setupMeta(); showPending();
+  $('done').hidden = true; $('app').hidden = false; window.scrollTo(0, 0);
+});
+init();
+</script>
+</body>
+</html>
