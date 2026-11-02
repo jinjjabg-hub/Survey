@@ -57,7 +57,7 @@
         h += '<div class="matrix">' + q.rows.map((r, ri) =>
           `<div class="mrow"><div class="mlabel">${SL.esc(tx.rows[ri])}</div>` +
           (r.other ? `<input class="other" data-q="${q.id}" data-row="${ri}" placeholder="${SL.esc(ui.otherPh)}" style="margin-bottom:8px">` : '') +
-          '<div class="mcols">' + q.cols.map((c, ci) =>
+          `<div class="mcols" style="grid-template-columns:repeat(${q.cols.length},1fr)">` + q.cols.map((c, ci) =>
             `<label class="mc"><input type="radio" name="${q.id}_${ri}" value="${ci}"><span>${SL.esc(tx.cols[ci])}</span></label>`).join('') +
           '</div></div>').join('') + '</div>';
       }

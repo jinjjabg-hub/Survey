@@ -3,7 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Visitor Survey | Busan</title>
+<title>International Visitor Survey | Busan</title>
+<meta name="description" content="Your experience at local restaurants & cafés · Anonymous, 1–2 min · English 日本語 中文 Tiếng Việt 한국어">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Visitor Survey in Busan">
+<meta property="og:description" content="Your experience at local restaurants & cafés · Anonymous, 1–2 min · English 日本語 中文 Tiếng Việt 한국어">
+<meta property="og:image" content="https://jinjjabg-hub.github.io/Survey/og-visitor.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://jinjjabg-hub.github.io/Survey/visitor.html">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -38,29 +47,27 @@
 // ===== 문항 정의 (구글시트에는 항상 한국어 값으로 저장) =====
 const o = (list, flags = {}) => list.map((v) => ({ v, other: v === '기타', excl: (flags.excl || []).includes(v) }));
 const NOCONTACT = '음식점·카페 직원과 소통한 경험 없음';
+const TO_Q5 = (A) => A.is('q2', '0회') || A.is('q2', '기억나지 않음') || A.is('q2', NOCONTACT);
 const Q = [
   { id: 'q1', num: 1, type: 'multi', col: 'Q1_방문지역',
     opts: o(['광안리', '해운대', '자갈치', '국제시장', '서면', '기타']) },
-  { id: 'q2', num: 2, type: 'single', col: 'Q2_소통어려움빈도', endIf: (A) => A.is('q2', NOCONTACT),
-    opts: o(['전혀 없었음', '드물게', '가끔', '자주', '매번', NOCONTACT]) },
-  { id: 'q3', num: 3, type: 'multi', max: 2, col: 'Q3_어려웠던내용',
-    show: (A) => !A.is('q2', '전혀 없었음') && !A.is('q2', NOCONTACT),
+  { id: 'q2', num: 2, type: 'single', col: 'Q2_소통어려움횟수', endIf: (A) => A.is('q2', NOCONTACT),
+    opts: o(['0회', '1회', '2~3회', '4회 이상', NOCONTACT, '기억나지 않음']) },
+  { id: 'q3', num: 3, type: 'multi', max: 2, col: 'Q3_어려웠던내용', show: (A) => !TO_Q5(A),
     opts: o(['메뉴 이름·설명', '재료·알레르기·식이 제한 정보', '주문 내용·수량·요청 사항', '가격·결제 방법', '기타', '기억나지 않음'], { excl: ['기억나지 않음'] }) },
-  { id: 'q4', num: 4, type: 'multi', max: 2, col: 'Q4_실제발생한일',
-    show: (A) => !A.is('q2', '전혀 없었음') && !A.is('q2', NOCONTACT),
+  { id: 'q4', num: 4, type: 'multi', max: 2, col: 'Q4_실제발생한일', show: (A) => !TO_Q5(A),
     opts: o(['주문하거나 정보를 확인하는 데 시간이 더 걸림', '주문·요청이 잘못 전달되거나 다시 확인해야 했음', '주문을 바꾸거나 취소함 또는 구매하지 않고 떠남', '별다른 영향 없음', '기억나지 않음', '기타'], { excl: ['별다른 영향 없음', '기억나지 않음'] }) },
-  { id: 'q5', num: 5, type: 'multi', max: 2, col: 'Q5_도움될지원',
-    show: (A) => !A.is('q2', NOCONTACT),
+  { id: 'q5', num: 5, type: 'multi', max: 2, col: 'Q5_도움될지원', show: (A) => !A.is('q2', NOCONTACT),
     opts: o(['이해할 수 있는 언어의 메뉴·상품 설명', '명확한 재료·알레르기·식이 제한 안내', '명확한 주문·가격·결제 안내', '번역·통역 도구', '내가 이해하는 언어로 소통할 수 있는 직원', '필요 없음', '잘 모르겠음', '기타'], { excl: ['필요 없음', '잘 모르겠음'] }) }
 ];
 
-// ===== 언어별 문구 =====
+// ===== 언어별 문구 (영어·일본어·중국어 간체·한국어: 팀 번역본 / 번체·베트남어: 추가 번역) =====
 const LANGS = [
   ['en', 'English'], ['ja', '日本語'], ['zh-CN', '简体中文'], ['zh-TW', '繁體中文'], ['vi', 'Tiếng Việt'], ['ko', '한국어']
 ];
 const L = {
   en: {
-    ui: { kicker: 'Tongmyong University · Service-Learning', title: 'Visitor Survey', subtitle: 'Understanding your experience at local restaurants and cafés in Busan',
+    ui: { kicker: 'Tongmyong University · Service-Learning', title: 'International Visitor Survey', subtitle: 'Communication experiences at restaurants and cafés in Busan',
       intro: 'Hello! We are students from Tongmyong University working on a service-learning project. This anonymous survey asks about your experience during this visit to Busan. It takes about 1–2 minutes. Taking part is voluntary. You may skip any question or stop at any time. We do not collect your name or contact details.',
       target: 'For international visitors to Busan. If you live in Busan, please do not complete this survey.',
       one: 'Choose one answer unless the question says otherwise.',
@@ -69,62 +76,66 @@ const L = {
       sent: '✓ Submitted', saved: 'Saved on this device. It will be sent automatically when you are online.' },
     q: {
       q1: { t: 'Which of these areas have you visited during this trip to Busan?', o: ['Gwangalli', 'Haeundae', 'Jagalchi', 'Gukje Market', 'Seomyeon', 'Other'] },
-      q2: { t: 'During this trip, how often have you had difficulty communicating with staff at restaurants or cafés in Busan?', o: ['Never', 'Rarely', 'Sometimes', 'Often', 'Every time', 'I have not interacted with staff at a restaurant or café'], end: 'The survey ends here. Please tap Submit. Thank you!' },
+      q2: { t: 'During this trip to Busan, on how many visits to restaurants or cafés did you have difficulty communicating with staff?', n: 'Count each visit once, even if you had communication difficulties several times during that visit.',
+        o: ['0 visits', '1 visit', '2–3 visits', '4 or more visits', 'I have not interacted with staff at a restaurant or café', 'Cannot remember'], end: 'The survey ends here. Please tap Submit. Thank you!' },
       q3: { t: 'What was difficult to communicate about?', o: ['Menu names or descriptions', 'Ingredients, allergies or dietary needs', 'Orders, quantities or special requests', 'Prices or payment methods', 'Other', 'Cannot remember'] },
       q4: { t: 'What happened because of the communication difficulty?', o: ['It took longer to order or get information', 'My order or request was misunderstood or had to be checked again', 'I changed or cancelled an order, or left without buying', 'There was no noticeable effect', 'Cannot remember', 'Other'] },
       q5: { t: 'What, if anything, would help you communicate with staff?', o: ['Menu or product descriptions in a language I understand', 'Clear information about ingredients, allergies and dietary needs', 'Clear information about ordering, prices and payment', 'Translation or interpreting tools', 'Staff who speak a language I understand', 'No support needed', 'Not sure', 'Other'] }
     }
   },
   ja: {
-    ui: { kicker: '東明大学 · サービスラーニング', title: '旅行者アンケート', subtitle: '釜山の飲食店・カフェでのご経験について',
-      intro: 'こんにちは！私たちは東明（トンミョン）大学でサービスラーニング活動を行っている学生です。この匿名アンケートでは、今回の釜山旅行でのご経験についてお伺いします。所要時間は約1～2分です。参加は任意で、どの質問も飛ばしたり、いつでも中止したりできます。お名前や連絡先はお伺いしません。',
-      target: '釜山を訪れている海外からの旅行者の方が対象です。釜山にお住まいの方はご回答をご遠慮ください。',
-      one: '特に記載がない場合は、1つだけお選びください。',
-      upto: '{n}つまで', all: '当てはまるものをすべて', otherPh: '具体的にご記入ください', maxMsg: '{n}つまで選択できます。',
-      submit: '送信する', thanks: 'ご協力ありがとうございました！', again: '新しい回答', empty: 'まだ回答がありません。このまま送信しますか？',
+    ui: { kicker: '東明大学 · サービスラーニング', title: '外国人観光客アンケート', subtitle: '釜山の飲食店やカフェでのコミュニケーションに関する調査',
+      intro: 'こんにちは。私たちは東明大学のサービスラーニング活動として、今回の釜山旅行中の飲食店やカフェでの体験を調査しています。回答は匿名で、所要時間は約1～2分です。参加は任意です。答えたくない質問は飛ばすことができ、いつでも回答を中止できます。氏名や連絡先は収集しません。',
+      target: '釜山を訪れた外国人観光客が対象です。釜山にお住まいの方は対象外です。',
+      one: '特に指定がない場合は、回答を1つ選んでください。',
+      upto: '{n}つまで選択', all: 'すべて選択', otherPh: '具体的にご記入ください', maxMsg: '{n}つまで選択できます。',
+      submit: '送信する', thanks: 'ご協力ありがとうございました。', again: '新しい回答', empty: 'まだ回答がありません。このまま送信しますか？',
       sent: '✓ 送信しました', saved: 'この端末に保存しました。オンラインになると自動で送信されます。' },
     q: {
-      q1: { t: '今回の釜山旅行で訪れた場所はどこですか？', o: ['広安里（クァンアンリ）', '海雲台（ヘウンデ）', 'チャガルチ', '国際市場（クッチェシジャン）', '西面（ソミョン）', 'その他'] },
-      q2: { t: '今回の旅行中、釜山の飲食店やカフェのスタッフとのコミュニケーションで、どのくらいの頻度で困ったことがありましたか？', o: ['まったくなかった', 'まれにあった', 'ときどきあった', 'よくあった', '毎回あった', '飲食店・カフェのスタッフとやり取りしたことがない'], end: 'アンケートはここで終了です。「送信する」を押してください。ありがとうございました！' },
-      q3: { t: 'どのような内容のやり取りが難しかったですか？', o: ['メニュー名・説明', '食材・アレルギー・食事制限の情報', '注文内容・数量・リクエスト', '価格・支払い方法', 'その他', '覚えていない'] },
-      q4: { t: 'コミュニケーションの難しさによって、実際にどのようなことがありましたか？', o: ['注文や情報の確認に時間がかかった', '注文やリクエストが誤って伝わった、または確認し直す必要があった', '注文を変更・キャンセルした、または購入せずに店を出た', '特に影響はなかった', '覚えていない', 'その他'] },
-      q5: { t: 'スタッフとのコミュニケーションに、どのようなサポートがあると役立ちますか？', o: ['理解できる言語でのメニュー・商品説明', '食材・アレルギー・食事制限についての分かりやすい案内', '注文・価格・支払いについての分かりやすい案内', '翻訳・通訳ツール', '自分が理解できる言語を話せるスタッフ', '特に必要ない', 'よく分からない', 'その他'] }
+      q1: { t: '今回の釜山旅行で訪れた場所をすべて選んでください。', o: ['広安里', '海雲台', 'チャガルチ', '国際市場', '西面', 'その他'] },
+      q2: { t: '今回の釜山旅行中、飲食店やカフェの店員とのやり取りで困ったのは、何回の来店時ですか。', n: '同じ来店中に何度困ったことがあっても、1回として数えてください。',
+        o: ['0回', '1回', '2～3回', '4回以上', '飲食店やカフェの店員とやり取りしたことがない', '覚えていない'], end: 'アンケートはここで終了です。「送信する」を押してください。ありがとうございました。' },
+      q3: { t: 'どのような内容を伝えたり理解したりする際に困りましたか。', o: ['メニュー名や説明', '食材・アレルギー・食事制限に関する情報', '注文内容・数量・要望', '価格や支払い方法', 'その他', '覚えていない'] },
+      q4: { t: 'コミュニケーションの難しさにより、実際に何が起きましたか。', o: ['注文や情報の確認に時間がかかった', '注文や要望が誤って伝わった、または再確認が必要だった', '注文を変更・キャンセルした、または購入せずに店を出た', '特に影響はなかった', '覚えていない', 'その他'] },
+      q5: { t: '店員とのやり取りに、どのようなサポートが役立ちますか。', o: ['理解できる言語でのメニューや商品の説明', '明確な食材・アレルギー・食事制限の案内', '明確な注文・価格・支払いの案内', '翻訳・通訳ツール', '自分が理解できる言語で対応できる店員', 'サポートは不要', 'わからない', 'その他'] }
     }
   },
   'zh-CN': {
-    ui: { kicker: '东明大学 · 服务学习', title: '游客问卷', subtitle: '关于您在釜山餐厅和咖啡馆的体验',
-      intro: '您好！我们是东明大学的学生，正在进行一项服务学习（Service-Learning）项目。本问卷为匿名填写，旨在了解您此次釜山之行的体验，约需1–2分钟。参与完全自愿，您可以跳过任何问题或随时停止。我们不会收集您的姓名或联系方式。',
-      target: '本问卷面向来釜山旅游的外国游客。居住在釜山的人士请勿填写。',
-      one: '除特别说明外，请只选择一项。',
+    ui: { kicker: '东明大学 · 服务学习', title: '外国游客问卷调查', subtitle: '釜山餐厅及咖啡馆的沟通体验调查',
+      intro: '您好！我们是东明大学服务学习项目的学生。本问卷旨在了解您此次到访釜山期间在餐厅及咖啡馆的体验。问卷匿名填写，约需1至2分钟。参与完全自愿，您可以跳过任何问题或随时停止作答。我们不收集您的姓名或联系方式。',
+      target: '本问卷面向到访釜山的外国游客。居住在釜山的人士不属于本次调查对象。',
+      one: '除另有说明外，每题请选择一项。',
       upto: '最多选{n}项', all: '可多选', otherPh: '请具体填写', maxMsg: '最多可选择{n}项。',
       submit: '提交', thanks: '感谢您的参与！', again: '新的回答', empty: '您还没有回答任何问题。仍要提交吗？',
       sent: '✓ 已提交', saved: '已保存在本设备上，联网后将自动发送。' },
     q: {
-      q1: { t: '此次釜山旅行中，您去过以下哪些地方？', o: ['广安里', '海云台', '札嘎其市场', '国际市场', '西面', '其他'] },
-      q2: { t: '此次旅行中，您与釜山餐厅或咖啡馆的店员沟通时，遇到困难的频率如何？', o: ['从未', '很少', '有时', '经常', '每次都有', '没有和餐厅或咖啡馆的店员交流过'], end: '问卷到此结束，请点击“提交”。谢谢！' },
-      q3: { t: '在哪些内容上沟通比较困难？', o: ['菜单名称或说明', '食材、过敏或饮食禁忌信息', '点餐内容、数量或特殊要求', '价格或付款方式', '其他', '记不清了'] },
-      q4: { t: '沟通困难实际带来了什么影响？', o: ['点餐或确认信息花了更多时间', '点餐或要求被误解，或需要再次确认', '更改或取消了点餐，或没有购买就离开了', '没有明显影响', '记不清了', '其他'] },
-      q5: { t: '什么样的帮助能让您更好地与店员沟通？', o: ['用我能看懂的语言提供的菜单或商品说明', '清晰的食材、过敏和饮食禁忌说明', '清晰的点餐、价格和付款说明', '翻译或口译工具', '会说我能听懂的语言的店员', '不需要帮助', '不确定', '其他'] }
+      q1: { t: '此次釜山旅行期间，您去过以下哪些地方？', o: ['广安里', '海云台', '札嘎其', '国际市场', '西面', '其他'] },
+      q2: { t: '此次釜山旅行期间，您在餐厅或咖啡馆与店员沟通时遇到困难的到店次数是多少？', n: '同一次到店期间，即使多次遇到沟通困难，也只计为1次。',
+        o: ['0次', '1次', '2至3次', '4次及以上', '没有与餐厅或咖啡馆的店员交流过', '记不清'], end: '问卷到此结束，请点击“提交”。谢谢！' },
+      q3: { t: '您在沟通哪些内容时遇到了困难？', o: ['菜单名称或说明', '食材、过敏或饮食限制信息', '点单内容、数量或特殊要求', '价格或付款方式', '其他', '记不清'] },
+      q4: { t: '沟通困难实际带来了哪些影响？', o: ['点单或获取信息花费了更多时间', '订单或要求被误解，或需要再次确认', '更改或取消了订单，或未消费就离开了', '没有明显影响', '记不清', '其他'] },
+      q5: { t: '哪些支持有助于您与店员沟通？', o: ['用我能理解的语言提供菜单或商品说明', '清晰的食材、过敏及饮食限制信息', '清晰的点单、价格及付款说明', '翻译或口译工具', '能用我理解的语言交流的店员', '不需要支持', '不确定', '其他'] }
     }
   },
   'zh-TW': {
-    ui: { kicker: '東明大學 · 服務學習', title: '遊客問卷', subtitle: '關於您在釜山餐廳與咖啡廳的體驗',
-      intro: '您好！我們是東明大學的學生，正在進行一項服務學習（Service-Learning）計畫。本問卷為匿名填寫，想了解您這次釜山之旅的體驗，約需1–2分鐘。參與完全自願，您可以略過任何問題或隨時停止。我們不會收集您的姓名或聯絡方式。',
-      target: '本問卷適用於來釜山旅遊的外國旅客。居住在釜山的人請勿填寫。',
-      one: '除特別說明外，請只選擇一項。',
+    ui: { kicker: '東明大學 · 服務學習', title: '外國遊客問卷調查', subtitle: '釜山餐廳及咖啡廳的溝通體驗調查',
+      intro: '您好！我們是東明大學服務學習計畫的學生。本問卷想了解您這次到訪釜山期間在餐廳及咖啡廳的體驗。問卷為匿名填寫，約需1至2分鐘。參與完全自願，您可以略過任何問題或隨時停止作答。我們不會收集您的姓名或聯絡方式。',
+      target: '本問卷適用於到訪釜山的外國遊客。居住在釜山的人士不屬於本次調查對象。',
+      one: '除另有說明外，每題請選擇一項。',
       upto: '最多選{n}項', all: '可複選', otherPh: '請具體填寫', maxMsg: '最多可選擇{n}項。',
       submit: '送出', thanks: '感謝您的參與！', again: '新的回答', empty: '您還沒有回答任何問題。仍要送出嗎？',
       sent: '✓ 已送出', saved: '已儲存在此裝置上，連上網路後會自動傳送。' },
     q: {
-      q1: { t: '這次釜山旅行中，您去過以下哪些地方？', o: ['廣安里', '海雲臺', '札嘎其市場', '國際市場', '西面', '其他'] },
-      q2: { t: '這次旅行中，您與釜山餐廳或咖啡廳店員溝通時，遇到困難的頻率如何？', o: ['從未', '很少', '有時', '經常', '每次都有', '沒有和餐廳或咖啡廳的店員交流過'], end: '問卷到此結束，請點選「送出」。謝謝！' },
-      q3: { t: '哪些內容溝通起來比較困難？', o: ['菜單名稱或說明', '食材、過敏或飲食限制資訊', '點餐內容、數量或特殊需求', '價格或付款方式', '其他', '記不清楚'] },
-      q4: { t: '溝通困難實際造成了什麼影響？', o: ['點餐或確認資訊花了更多時間', '點餐或需求被誤解，或需要再次確認', '更改或取消點餐，或沒有購買就離開', '沒有明顯影響', '記不清楚', '其他'] },
-      q5: { t: '什麼樣的協助能讓您更容易與店員溝通？', o: ['以我看得懂的語言提供菜單或商品說明', '清楚的食材、過敏與飲食限制說明', '清楚的點餐、價格與付款說明', '翻譯或口譯工具', '會說我聽得懂的語言的店員', '不需要協助', '不確定', '其他'] }
+      q1: { t: '這次釜山旅行期間，您去過以下哪些地方？', o: ['廣安里', '海雲臺', '札嘎其', '國際市場', '西面', '其他'] },
+      q2: { t: '這次釜山旅行期間，您在餐廳或咖啡廳與店員溝通時遇到困難的到店次數是多少？', n: '同一次到店期間，即使多次遇到溝通困難，也只算1次。',
+        o: ['0次', '1次', '2至3次', '4次以上', '沒有和餐廳或咖啡廳的店員交流過', '記不清楚'], end: '問卷到此結束，請點選「送出」。謝謝！' },
+      q3: { t: '您在溝通哪些內容時遇到了困難？', o: ['菜單名稱或說明', '食材、過敏或飲食限制資訊', '點餐內容、數量或特殊需求', '價格或付款方式', '其他', '記不清楚'] },
+      q4: { t: '溝通困難實際帶來了哪些影響？', o: ['點餐或取得資訊花了更多時間', '訂單或需求被誤解，或需要再次確認', '更改或取消了訂單，或未消費就離開了', '沒有明顯影響', '記不清楚', '其他'] },
+      q5: { t: '哪些協助有助於您與店員溝通？', o: ['以我看得懂的語言提供菜單或商品說明', '清楚的食材、過敏及飲食限制資訊', '清楚的點餐、價格及付款說明', '翻譯或口譯工具', '能用我聽得懂的語言交流的店員', '不需要協助', '不確定', '其他'] }
     }
   },
   vi: {
-    ui: { kicker: 'Đại học Tongmyong · Service-Learning', title: 'Khảo sát du khách', subtitle: 'Trải nghiệm của bạn tại nhà hàng và quán cà phê ở Busan',
+    ui: { kicker: 'Đại học Tongmyong · Service-Learning', title: 'Khảo sát du khách quốc tế', subtitle: 'Trải nghiệm giao tiếp tại nhà hàng và quán cà phê ở Busan',
       intro: 'Xin chào! Chúng tôi là sinh viên Đại học Tongmyong đang thực hiện một dự án học tập phục vụ cộng đồng (service-learning). Khảo sát ẩn danh này hỏi về trải nghiệm của bạn trong chuyến thăm Busan lần này và mất khoảng 1–2 phút. Việc tham gia là tự nguyện. Bạn có thể bỏ qua bất kỳ câu hỏi nào hoặc dừng lại bất cứ lúc nào. Chúng tôi không thu thập tên hay thông tin liên lạc của bạn.',
       target: 'Dành cho du khách quốc tế đến Busan. Nếu bạn sống ở Busan, vui lòng không tham gia khảo sát này.',
       one: 'Chỉ chọn một đáp án, trừ khi câu hỏi có ghi chú khác.',
@@ -133,14 +144,15 @@ const L = {
       sent: '✓ Đã gửi', saved: 'Đã lưu trên thiết bị này. Sẽ tự động gửi khi có mạng.' },
     q: {
       q1: { t: 'Trong chuyến đi Busan lần này, bạn đã đến những khu vực nào?', o: ['Gwangalli', 'Haeundae', 'Jagalchi', 'Chợ Gukje', 'Seomyeon', 'Khác'] },
-      q2: { t: 'Trong chuyến đi này, bạn có thường gặp khó khăn khi giao tiếp với nhân viên nhà hàng hoặc quán cà phê ở Busan không?', o: ['Không bao giờ', 'Hiếm khi', 'Thỉnh thoảng', 'Thường xuyên', 'Lần nào cũng vậy', 'Tôi chưa giao tiếp với nhân viên nhà hàng hay quán cà phê'], end: 'Khảo sát kết thúc tại đây. Vui lòng nhấn Gửi. Xin cảm ơn!' },
+      q2: { t: 'Trong chuyến đi Busan này, bạn gặp khó khăn khi giao tiếp với nhân viên trong bao nhiêu lần ghé nhà hàng hoặc quán cà phê?', n: 'Mỗi lần ghé quán chỉ tính là 1 lần, dù bạn gặp khó khăn nhiều lần trong lần ghé đó.',
+        o: ['0 lần', '1 lần', '2–3 lần', '4 lần trở lên', 'Tôi chưa giao tiếp với nhân viên nhà hàng hay quán cà phê', 'Không nhớ'], end: 'Khảo sát kết thúc tại đây. Vui lòng nhấn Gửi. Xin cảm ơn!' },
       q3: { t: 'Bạn gặp khó khăn khi trao đổi về nội dung nào?', o: ['Tên món hoặc mô tả món', 'Nguyên liệu, dị ứng hoặc chế độ ăn kiêng', 'Nội dung gọi món, số lượng hoặc yêu cầu đặc biệt', 'Giá hoặc phương thức thanh toán', 'Khác', 'Không nhớ'] },
       q4: { t: 'Khó khăn trong giao tiếp đã dẫn đến điều gì?', o: ['Mất nhiều thời gian hơn để gọi món hoặc hỏi thông tin', 'Món hoặc yêu cầu của tôi bị hiểu sai hoặc phải kiểm tra lại', 'Tôi đã đổi hoặc hủy món, hoặc rời đi mà không mua', 'Không có ảnh hưởng đáng kể', 'Không nhớ', 'Khác'] },
       q5: { t: 'Điều gì sẽ giúp bạn giao tiếp với nhân viên dễ hơn?', o: ['Mô tả món/sản phẩm bằng ngôn ngữ tôi hiểu', 'Thông tin rõ ràng về nguyên liệu, dị ứng và chế độ ăn kiêng', 'Hướng dẫn rõ ràng về gọi món, giá và thanh toán', 'Công cụ dịch hoặc phiên dịch', 'Nhân viên nói được ngôn ngữ tôi hiểu', 'Không cần hỗ trợ', 'Không chắc', 'Khác'] }
     }
   },
   ko: {
-    ui: { kicker: '동명대학교 서비스러닝', title: '외국인 관광객 설문지', subtitle: '부산 음식점·카페 이용 경험 조사',
+    ui: { kicker: '동명대학교 서비스러닝', title: '외국인 관광객 설문지', subtitle: '부산 음식점과 카페 이용 중 소통 경험 조사',
       intro: '안녕하세요. 동명대학교 서비스러닝 활동으로 이번 부산 방문 중 음식점·카페 이용 경험을 조사합니다. 약 1~2분이 걸리며 익명으로 답합니다. 참여는 자율이고, 문항을 건너뛰거나 언제든 중단할 수 있습니다. 이름·연락처는 받지 않습니다.',
       target: '대상은 부산을 방문한 외국인 관광객입니다. 부산 거주자는 조사 대상에서 제외합니다.',
       one: '별도 표시가 없으면 한 개만 선택해 주세요.',
@@ -149,7 +161,7 @@ const L = {
       sent: '✓ 전송 완료', saved: '이 기기에 저장했어요. 인터넷이 연결되면 자동 전송됩니다.' },
     q: {
       q1: { t: '이번 부산 여행에서 방문한 곳은 어디입니까?' },
-      q2: { t: '이번 부산 여행 중 음식점·카페 직원과 소통하는 데 얼마나 자주 어려움이 있었습니까?', end: '설문이 여기서 끝납니다. 제출하기를 눌러 주세요. 감사합니다!' },
+      q2: { t: '이번 부산 여행 중 음식점·카페 직원과 소통이 어려웠던 적은 몇 번입니까?', n: '한 번 방문한 가게에서 여러 차례 어려움이 있었어도 1회로 세어 주세요.', end: '설문이 여기서 끝납니다. 제출하기를 눌러 주세요. 감사합니다!' },
       q3: { t: '어떤 내용을 주고받을 때 어려움이 있었습니까?' },
       q4: { t: '소통의 어려움 때문에 실제로 어떤 일이 있었습니까?' },
       q5: { t: '직원과 소통할 때 어떤 지원이 도움이 되겠습니까?' }

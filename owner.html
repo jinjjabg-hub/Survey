@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>사장님 설문 | 우리 동네 메뉴를 세계로</title>
+<meta name="description" content="외국인 관광객 응대, 사장님의 경험을 들려주세요 · 익명 5~7분">
+<meta property="og:type" content="website">
+<meta property="og:title" content="우리 동네 메뉴를 세계로 | 사장님 설문">
+<meta property="og:description" content="외국인 관광객 응대, 사장님의 경험을 들려주세요 · 익명 5~7분">
+<meta property="og:image" content="https://jinjjabg-hub.github.io/Survey/og-ko.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://jinjjabg-hub.github.io/Survey/owner.html">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +20,7 @@
   <header class="top">
     <div class="kicker">동명대학교 서비스러닝</div>
     <h1>소상공인 사장님 설문지</h1>
-    <p class="sub">우리 동네 메뉴를 세계로 | 상권 운영의 어려움과 외국인 관광객 응대 경험</p>
+    <p class="sub">우리 동네 메뉴를 세계로 | 가게 운영 현황과 외국인 관광객 응대 경험</p>
   </header>
 
   <div class="card intro">
@@ -55,14 +64,14 @@ const NOZERO = (A) => !A.is('q5', '0일');
 const o = (list, flags = {}) => list.map((v) => ({ v, other: v === '기타', excl: (flags.excl || []).includes(v) }));
 
 const Q = [
-  { id: 'q1', num: 1, type: 'single', col: 'Q1_업종', sec: '가게 운영 전반의 어려움',
+  { id: 'q1', num: 1, type: 'single', col: 'Q1_업종', sec: '가게 운영 현황',
     t: '가게의 주된 업종은 무엇입니까?',
     opts: o(['음식점', '카페·음료', '식품 판매', '의류·잡화', '기타']) },
   { id: 'q2', num: 2, type: 'matrix', col: 'Q2',
     t: '최근 30일 동안 다음 항목에서 어느 정도 어려움을 겪으셨습니까?',
-    n: '각 행마다 한 칸을 선택해 주세요. 경험하거나 해당하는 일이 없으면 ‘해당 없음’을 선택해 주세요.',
+    n: '항목마다 답을 하나씩 골라 주세요.',
     rows: o(['매출 감소와 손님 유치', '임대료·재료비 등 비용 부담', '인력 확보와 업무 부담', '가게 홍보와 온라인 관리', '메뉴·상품·서비스 관리', '외국인 관광객과의 소통', '기타']),
-    cols: ['전혀 없음', '적음', '보통', '큼', '매우 큼', '해당 없음'] },
+    cols: ['전혀 없음', '적음', '보통', '큼', '매우 큼'] },
   { id: 'q3', num: 3, type: 'rank', col: 'Q3', source: 'q2',
     t: '2번 항목 중 가장 먼저 해결하고 싶은 어려움은 무엇입니까?',
     r1: '1순위', r2: '2순위', none: '해결이 필요한 어려움 없음' },
@@ -74,7 +83,7 @@ const Q = [
     opts: o(['0일', '1~5일', '6~15일', '16일 이상', '잘 모르겠음']) },
   { id: 'q6', num: 6, type: 'single', col: 'Q6_외국인손님비중',
     t: '최근 30일 동안 전체 손님 중 외국인 관광객은 어느 정도였습니까?',
-    n: '정확한 집계가 없으면 체감 기준으로 답해 주세요. 관광객 여부를 구분하기 어려우면 ‘잘 모르겠음’을 선택해 주세요.',
+    n: '최근 30일 동안 방문한 손님을 떠올려 답해 주세요. 구분하기 어려우면 ‘잘 모르겠음’을 골라 주세요.',
     opts: o(['없음', '10% 미만', '10~29%', '30~49%', '50% 이상', '잘 모르겠음']) },
   { id: 'q7', num: 7, type: 'single', col: 'Q7_소통어려움정도', sec: '외국인 관광객 응대 경험', show: NOZERO,
     t: '외국인 관광객과 소통하는 데 어느 정도 어려움이 있었습니까?',
@@ -96,7 +105,7 @@ const Q = [
     t: '앞으로 외국인 관광객 응대에 어떤 지원이 필요합니까?',
     opts: o(['외국어 메뉴·상품 설명', '재료·알레르기·식이 제한 안내', '주문·가격·결제 안내', '간단한 외국어 응대 교육', '번역·통역 도구 사용 지원', '외국어 가게 소개·홍보 자료', '필요 없음', '잘 모르겠음', '기타'], { excl: ['필요 없음', '잘 모르겠음'] }) },
   { id: 'q13', num: 13, type: 'text', col: 'Q13_자유응답',
-    t: '장사하면서 가장 불편했던 일이나 꼭 필요한 지원을 자유롭게 적어 주세요.', n: '선택 문항입니다.' }
+    t: '운영 중 겪었던 불편한 일이 있거나 개선되었으면 좋겠다고 생각한 경험이 있으시면 자유롭게 적어주세요.', n: '선택 문항입니다.' }
 ];
 
 // 한국어 화면: 문항 정의의 글자를 그대로 사용

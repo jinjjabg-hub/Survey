@@ -66,4 +66,3 @@ label.mc input:checked + span{border-color:var(--accent);background:var(--accent
 .done .big{font-size:48px}
 .status{font-size:13px;margin-top:8px}
 .status.ok{color:var(--ok)} .status.warn{color:var(--warn)}
-@media (max-width:380px){ .mcols{grid-template-columns:repeat(3,1fr)} }
